@@ -4,7 +4,7 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const zap = b.addModule("zap", .{
+    const zlap = b.addModule("zlap", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
     });
@@ -16,7 +16,7 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .imports = &.{
-                .{ .name = "zap", .module = zap },
+                .{ .name = "zlap", .module = zlap },
             },
         }),
     });
@@ -34,19 +34,19 @@ pub fn build(b: *std.Build) void {
 
     const test_step = b.step("test", "Run tests");
 
-    const zap_tests = b.addTest(.{
-        .root_module = zap,
+    const zlap_tests = b.addTest(.{
+        .root_module = zlap,
     });
-    const run_zap_tests = b.addRunArtifact(zap_tests);
-    test_step.dependOn(&run_zap_tests.step);
+    const run_zlap_tests = b.addRunArtifact(zlap_tests);
+    test_step.dependOn(&run_zlap_tests.step);
 
     const integration_tests = b.addTest(.{
         .root_module = b.createModule(.{
-            .root_source_file = b.path("tests/zap_tests.zig"),
+            .root_source_file = b.path("tests/zlap_tests.zig"),
             .target = target,
             .optimize = optimize,
             .imports = &.{
-                .{ .name = "zap", .module = zap },
+                .{ .name = "zlap", .module = zlap },
             },
         }),
     });

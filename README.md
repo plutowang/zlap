@@ -1,85 +1,76 @@
-# ⚡ Zap
+# Zlap
 
 A modern, feature-rich command-line argument parsing library for Zig.
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE) [![CI](https://github.com/plutowang/zlap/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/plutowang/zlap/actions/workflows/ci.yml) [![Zig](https://img.shields.io/badge/Zig-0.15.2+-yellow.svg)](https://ziglang.org/) [![Release](https://img.shields.io/github/v/release/plutowang/zlap?include_prereleases)](https://github.com/plutowang/zlap/releases)
+
+## Real-World Usage
+
+Zlap is used in production CLI tools such as [term.conf](https://github.com/plutowang/term.conf), a terminal configuration management tool. The [`setup-cli`](https://github.com/plutowang/term.conf/tree/main/setup-cli) implementation demonstrates:
+
+- Subcommand architecture (`link`, `opencode`)
+- Global and subcommand-specific flags
+- Option parsing with validation
+- Integrated colored logging
+- Production-ready CLI patterns
 
 ## Features
 
-- 🚀 **Fast and lightweight** - Zero external dependencies
-- 🔧 **Flexible API** - Supports flags, options, positional arguments, and subcommands
-- 📚 **Auto-generated help** - Beautiful help messages with minimal configuration
-- 🎯 **Type-safe parsing** - Leverage Zig's type system for safer argument handling
-- 🌈 **Colored output** - Built-in logger with colored console output
-- ✅ **Validation** - Automatic validation of required arguments and options
-- 🔄 **Chainable API** - Fluent interface for easy parser configuration
+- **Fast and lightweight** - Zero external dependencies
+- **Flexible API** - Supports flags, options, positional arguments, and subcommands
+- **Auto-generated help** - Beautiful help messages with minimal configuration
+- **Type-safe parsing** - Leverage Zig's type system for safer argument handling
+- **Colored output** - Built-in logger with colored console output
+- **Validation** - Automatic validation of required arguments and options
+- **Chainable API** - Fluent interface for easy parser configuration
 
 ## Installation
 
-### Using Zig Package Manager (Zig 0.15.2+)
+Add zlap to your `build.zig.zon`:
 
-Add zap to your `build.zig.zon`:
-
-#### Option 1: From GitHub (recommended)
+### Option 1: From GitHub Release (Recommended)
 
 ```zig
-.{
-    .name = "your-project",
-    .version = "0.0.1-beta",
-    .minimum_zig_version = "0.15.2",
-    .dependencies = .{
-        .zap = .{
-            .url = "https://github.com/plutowang/zap/archive/v0.0.1-beta.tar.gz",
-            .hash = "[...]",
-        },
+.dependencies = .{
+    .zlap = .{
+        .url = "https://github.com/plutowang/zlap/archive/v0.0.1-beta.tar.gz",
+        .hash = "...",
     },
-}
+},
 ```
 
-#### Option 1b: Latest main branch (bleeding edge)
+Get the hash: `zig fetch --save https://github.com/plutowang/zlap/archive/v0.0.1-beta.tar.gz`
+
+### Option 2: From Main Branch (Latest)
 
 ```zig
-.{
-    .name = "your-project",
-    .version = "0.0.1-beta",
-    .minimum_zig_version = "0.15.2",
-    .dependencies = .{
-        .zap = .{
-            .url = "https://github.com/plutowang/zap/archive/main.tar.gz",
-            .hash = "[...]",
-        },
+.dependencies = .{
+    .zlap = .{
+        .url = "https://github.com/plutowang/zlap/archive/main.tar.gz",
+        .hash = "...",
     },
-}
+},
 ```
 
-> ⚠️ **Warning**: When using `main.tar.gz`, you'll need to run `zig fetch --save https://github.com/plutowang/zap/archive/main.tar.gz` again whenever new commits are pushed to get updates and the new hash.
+> **Note**: Rerun `zig fetch --save https://github.com/plutowang/zlap/archive/main.tar.gz` when main branch updates to get new hash.
 
-#### Option 2: Local path (for development)
+### Option 3: Local Development
 
 ```zig
-.{
-    .name = "your-project",
-    .version = "0.0.1-beta",
-    .minimum_zig_version = "0.15.2",
-    .dependencies = .{
-        .zap = .{ .path = "../zap" },
-    },
-}
+.dependencies = .{
+    .zlap = .{ .path = "../zlap" },
+},
 ```
-
-> **Note**: To get the correct hash for the GitHub URL, run `zig fetch --save https://github.com/plutowang/zap/archive/v0.0.1-beta.tar.gz` (or `main.tar.gz` for latest) which will automatically add the dependency with the correct hash to your `build.zig.zon`.
->
-> **Recommended**: Use tagged releases (like `v0.0.1-beta`) instead of `main.tar.gz` for stable dependencies.
 
 Then in your `build.zig`:
 
 ```zig
-const zap = b.dependency("zap", .{
+const zlap = b.dependency("zlap", .{
     .target = target,
     .optimize = optimize,
 });
 
-exe.root_module.addImport("zap", zap.module("zap"));
+exe.root_module.addImport("zlap", zlap.module("zlap"));
 ```
 
 ## API Reference
@@ -87,9 +78,17 @@ exe.root_module.addImport("zap", zap.module("zap"));
 ### Parser Creation
 
 ```zig
-var parser = zap.Parser.init(allocator, program_name, description, logger);
+const zlap = @import("zlap");
+
+// Initialize logger
+var logger = zlap.Logger{ .debug_mode = false };
+
+// Create parser
+var parser = zlap.Parser.init(allocator, "myapp", "Description", &logger);
 defer parser.deinit();
 ```
+
+> **Note**: The `-v`/`--verbose` flag is **reserved** and automatically added to every Parser. When set by users, it enables `logger.debug()` output. Do not define your own `-v` or `--verbose` flag.
 
 ### Adding Arguments
 
@@ -97,13 +96,13 @@ defer parser.deinit();
 
 ```zig
 // Add a flag with short and long form
-_ = parser.flag('v', "verbose", "Enable verbose output");
+_ = parser.flag('d', "debug", "Enable debug mode");
 
 // Short form only
 _ = parser.flag('q', null, "Quiet mode");
 
 // Long form only
-_ = parser.flag(null, "debug", "Enable debug mode");
+_ = parser.flag(null, "force", "Force operation");
 ```
 
 #### Options (Value-taking arguments)
@@ -131,42 +130,36 @@ _ = parser.arg("output", "Output file (optional)", false);
 
 ### Argument Formats
 
-Zap supports flexible argument formats for both short and long options:
+Zlap supports flexible formats:
 
-#### Long Format Options
+**Long options:**
 
-- `--option=value` - Value attached with equals sign
-- `--option value` - Value as separate argument
+- `--option=value` or `--option value`
 
-#### Short Format Options
+**Short options:**
 
-- `-o` - Flag only (for boolean flags)
-- `-ovalue` - Value attached directly (no space)
-- `-o=value` - Value attached with equals sign
-- `-abc` - Multiple short flags combined (equivalent to `-a -b -c`)
+- `-o value` or `-ovalue` or `-o=value`
+- `-abc` (multiple flags: `-a -b -c`)
 
 Examples:
 
 ```bash
-# These are equivalent for a string option:
+# All equivalent:
 myapp --output=file.txt
 myapp --output file.txt
 myapp -ofile.txt
-myapp -o=file.txt
-myapp -o file.txt
 
-# These are equivalent for flags:
-myapp --verbose --debug --quiet
-myapp -vdq
+# Multiple flags:
+myapp -vdq   # same as -v -d -q
 ```
 
 ### Subcommands
 
-Zap supports nested subcommands for complex CLI applications:
+Zlap supports nested subcommands for complex CLI applications:
 
 ```zig
 // Handler function for subcommand
-fn serveHandler(subparser: *zap.Parser) zap.ParseError!void {
+fn serveHandler(subparser: *zlap.Parser) zlap.ParseError!void {
     const port = subparser.getOption("port") orelse "8080";
     subparser.logger.info("Starting server on port {s}", .{port});
 }
@@ -184,8 +177,8 @@ try parser.execute(); // Calls the appropriate handler
 ### Accessing Parsed Values
 
 ```zig
-// Check if flag was provided
-if (parser.hasFlag("verbose")) {
+// Check if flag was provided (returns bool)
+if (parser.getFlag("verbose")) {
     // verbose mode enabled
 }
 
@@ -194,38 +187,32 @@ if (parser.getOption("output")) |output_path| {
     // use output_path
 }
 
-// Get positional argument by index
-if (parser.getPositional(0)) |first_arg| {
+// Get positional argument by index (returns ?[]const u8)
+if (parser.getArg(0)) |first_arg| {
     // use first_arg
-}
-
-// Get all positional arguments
-const positional_args = parser.getAllPositional();
-for (positional_args) |arg| {
-    parser.logger.info("Arg: {s}", .{arg});
 }
 ```
 
 ## Error Handling
 
-Zap provides detailed error information for various parsing scenarios:
+Zlap provides detailed error information for various parsing scenarios:
 
 ```zig
 parser.parse(args) catch |err| {
     switch (err) {
-        zap.ParseError.MissingArgument => {
+        zlap.ParseError.MissingArgument => {
             parser.logger.error("Missing required argument");
         },
-        zap.ParseError.MissingOption => {
+        zlap.ParseError.MissingOption => {
             parser.logger.error("Missing required option");
         },
-        zap.ParseError.UnknownOption => {
+        zlap.ParseError.UnknownOption => {
             parser.logger.error("Unknown option provided");
         },
-        zap.ParseError.MissingValue => {
+        zlap.ParseError.MissingValue => {
             parser.logger.error("Option requires a value");
         },
-        zap.ParseError.SubCommandNotFound => {
+        zlap.ParseError.SubCommandNotFound => {
             parser.logger.error("Unknown subcommand");
         },
         else => {
@@ -239,7 +226,7 @@ parser.parse(args) catch |err| {
 
 ## Help Generation
 
-Zap automatically generates comprehensive help messages:
+Zlap automatically generates comprehensive help messages:
 
 ```bash
 $ myapp --help
@@ -288,10 +275,15 @@ zig build test
 
 ## Examples
 
-Check out the [examples/](examples/) directory for more comprehensive examples:
+### Production Example
 
-- [`basic.zig`](examples/basic.zig) - Simple argument parsing
-- More examples coming soon!
+For a complete, real-world example, see [term.conf](https://github.com/plutowang/term.conf) - specifically the [`setup-cli`](https://github.com/plutowang/term.conf/tree/main/setup-cli) implementation. This terminal configuration management tool demonstrates subcommands, flags, options, and production-ready patterns.
+
+### Getting Started
+
+Check out the [examples/](examples/) directory for basic examples:
+
+- [`basic.zig`](examples/basic.zig) - Simple argument parsing demonstrating core features
 
 ## Contributing
 
@@ -307,4 +299,4 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ---
 
-⚡ **Zap** - Making command-line parsing in Zig a breeze!
+**Zlap** - Making command-line parsing in Zig a breeze!

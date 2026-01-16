@@ -1,7 +1,7 @@
 const std = @import("std");
-const zap = @import("zap");
-const Logger = zap.Logger;
-const Handler = zap.Handler;
+const zlap = @import("zlap");
+const Logger = zlap.Logger;
+const Handler = zlap.Handler;
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -10,7 +10,7 @@ pub fn main() !void {
     var logger = Logger{};
 
     // Create a simple CLI parser
-    var parser = zap.Parser.init(allocator, "basic", "A basic example using zap", &logger);
+    var parser = zlap.Parser.init(allocator, "basic", "A basic example using zlap", &logger);
     defer parser.deinit();
 
     _ = parser
@@ -24,7 +24,7 @@ pub fn main() !void {
     try parser.execute();
 }
 
-fn handler(parser: *zap.Parser) zap.ParseError!void {
+fn handler(parser: *zlap.Parser) zlap.ParseError!void {
     const logger = parser.logger;
     const name = parser.getOption("name") orelse "Guest";
     logger.info("Hello, {s}!", .{name});

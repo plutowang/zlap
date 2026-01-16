@@ -1,8 +1,8 @@
 const std = @import("std");
-const zap = @import("zap");
-const Parser = zap.Parser;
-const ParseError = zap.ParseError;
-const Logger = zap.Logger;
+const zlap = @import("zlap");
+const Parser = zlap.Parser;
+const ParseError = zlap.ParseError;
+const Logger = zlap.Logger;
 
 test "shared logger debug mode" {
     const allocator = std.testing.allocator;
