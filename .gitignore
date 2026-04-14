@@ -3,3 +3,5 @@ zig-out/
 *.o
 *.DS_Store
 .idea
+.opencode/*
+.cursor/*
