@@ -1,6 +1,6 @@
 .{
     .name = .zlap,
-    .version = "0.0.2-beta",
+    .version = "0.0.3-beta",
     .fingerprint = 0x48e8867a9c2ad478, // Changing this has security and trust implications.
     .minimum_zig_version = "0.15.2",
     .dependencies = .{},

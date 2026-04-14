@@ -83,6 +83,12 @@ pub const Parser = struct {
     parsed_positional: std.ArrayList([]const u8),
     active_sub_command: ?*SubCommand,
 
+    /// Parent parser for flag/option inheritance.
+    /// When a subcommand is created, its parser's parent is set to the
+    /// creating parser. This allows getFlag/getOption to traverse up the
+    /// chain and find flags/options registered on parent parsers.
+    parent: ?*Self,
+
     /// Configuration for a boolean flag (on/off).
     pub const Flag = struct {
         short: ?u8, // e.g., 'v' for -v
@@ -127,6 +133,7 @@ pub const Parser = struct {
             .parsed_options = std.StringHashMap([]const u8).init(allocator),
             .parsed_positional = .empty,
             .active_sub_command = null,
+            .parent = null,
         };
 
         // -v, --verbose is reserved for "Enable verbose logging"
@@ -228,9 +235,12 @@ pub const Parser = struct {
 
     /// Adds a subcommand to the parser.
     /// Returns the new subcommand's parser for fluent configuration.
+    /// The subcommand's parser inherits flags and options from this parent parser
+    /// via the parent chain.
     pub fn subCommand(self: *Self, name: []const u8, desc: []const u8, handler: Handler) !*Self {
         const cmd = try SubCommand.init(self.allocator, name, desc, handler, self.logger);
         try self.sub_commands.put(name, cmd);
+        cmd.parser.parent = self;
         return cmd.parser;
     }
 
@@ -292,17 +302,25 @@ pub const Parser = struct {
 
     /// Get a flag value by its long or short name.
     /// Returns the defined default value if the flag was not provided.
+    /// Traverses the parent chain if the flag is not found locally,
+    /// allowing subcommands to inherit flags from parent parsers.
     pub fn getFlag(self: *const Self, name: []const u8) bool {
         if (self.parsed_flags.get(name)) |v| return v;
         if (self.findFlagByName(name)) |f| return f.default;
+        // Traverse parent chain for inherited flags
+        if (self.parent) |p| return p.getFlag(name);
         return false;
     }
 
     /// Get an option value by its long or short name.
     /// Returns the defined default value if the option was not provided.
+    /// Traverses the parent chain if the option is not found locally,
+    /// allowing subcommands to inherit options from parent parsers.
     pub fn getOption(self: *const Self, name: []const u8) ?[]const u8 {
         if (self.parsed_options.get(name)) |val| return val;
         if (self.findOptionByName(name)) |opt| return opt.default;
+        // Traverse parent chain for inherited options
+        if (self.parent) |p| return p.getOption(name);
         return null;
     }
 
@@ -356,8 +374,7 @@ pub const Parser = struct {
                 try self.setOptionValue(opt, value);
                 return index;
             }
-            self.logger.debug("Unknown option --{s}", .{opt_name});
-            return ParseError.UnknownOption;
+            self.printErrorAndExit("Unknown option --{s}", .{opt_name});
         }
 
         // Check if it's a boolean flag
@@ -370,15 +387,13 @@ pub const Parser = struct {
         if (self.findOption(null, long_opt)) |opt| {
             const value_index = index + 1;
             if (value_index >= args.len) {
-                self.logger.debug("Missing value for option --{s}", .{long_opt});
-                return ParseError.MissingValue;
+                self.printErrorAndExit("Option --{s} requires a value", .{long_opt});
             }
             try self.setOptionValue(opt, args[value_index]);
             return value_index;
         }
 
-        self.logger.debug("Unknown option --{s}", .{long_opt});
-        return ParseError.UnknownOption;
+        self.printErrorAndExit("Unknown option --{s}", .{long_opt});
     }
 
     /// Parses short options (-o, -ovalue, -o=value, or clustered -abc).
@@ -396,8 +411,7 @@ pub const Parser = struct {
                 try self.setOptionValue(opt, value);
                 return index;
             }
-            self.logger.debug("Unknown option -{c}", .{short_char});
-            return ParseError.UnknownOption;
+            self.printErrorAndExit("Unknown option -{c}", .{short_char});
         }
 
         while (opt_index < current_arg.len) {
@@ -427,12 +441,10 @@ pub const Parser = struct {
                     try self.setOptionValue(opt, value);
                     return next_index;
                 }
-                self.logger.debug("Missing value for option -{c}", .{short_char});
-                return ParseError.MissingValue;
+                self.printErrorAndExit("Option -{c} requires a value", .{short_char});
             }
 
-            self.logger.debug("Unknown option -{c}", .{short_char});
-            return ParseError.UnknownOption;
+            self.printErrorAndExit("Unknown option -{c}", .{short_char});
         }
         return index;
     }
@@ -477,8 +489,7 @@ pub const Parser = struct {
 
             // Error if flags are found after positional arguments have started
             if (mem.startsWith(u8, current_arg, "-")) {
-                self.logger.debug("Unexpected flag after positional arguments: {s}", .{current_arg});
-                return ParseError.UnexpectedFlag;
+                self.printErrorAndExit("Unexpected option '{s}' after positional arguments", .{current_arg});
             }
 
             try self.parsed_positional.append(self.allocator, current_arg);
@@ -490,8 +501,7 @@ pub const Parser = struct {
     fn validateRequiredArgs(self: *Parser) ParseError!void {
         for (self.positional_args.items, 0..) |pos_arg, idx| {
             if (pos_arg.required and idx >= self.parsed_positional.items.len) {
-                self.logger.debug("Missing required argument: {s}", .{pos_arg.name});
-                return ParseError.MissingArgument;
+                self.printErrorAndExit("Missing required argument: <{s}>", .{pos_arg.name});
             }
         }
     }
@@ -514,11 +524,10 @@ pub const Parser = struct {
 
             if (!found) {
                 if (opt.long) |l| {
-                    self.logger.debug("Missing required option: --{s}", .{l});
+                    self.printErrorAndExit("Missing required option: --{s}", .{l});
                 } else if (opt.short) |s| {
-                    self.logger.debug("Missing required option: -{c}", .{s});
+                    self.printErrorAndExit("Missing required option: -{c}", .{s});
                 }
-                return ParseError.MissingOption;
             }
         }
     }
@@ -587,6 +596,16 @@ pub const Parser = struct {
     /// Searches for an option definition by a single name (either short or long).
     fn findOptionByName(self: *const Self, name: []const u8) ?Option {
         return self.findOption(if (name.len == 1) name[0] else null, name);
+    }
+
+    /// Prints an error message and the help text, then exits with code 1.
+    /// This provides a user-friendly experience instead of a raw error trace.
+    fn printErrorAndExit(self: *Parser, comptime fmt: []const u8, args: anytype) noreturn {
+        std.debug.print("Error: ", .{});
+        std.debug.print(fmt, args);
+        std.debug.print("\n\n", .{});
+        self.printHelp();
+        std.process.exit(1);
     }
 
     /// Prints a comprehensive help message including usage, commands, arguments, and options.
