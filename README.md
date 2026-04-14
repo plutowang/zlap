@@ -6,11 +6,11 @@ A modern, feature-rich command-line argument parsing library for Zig.
 
 ## Real-World Usage
 
-Zlap is used in production CLI tools such as [term.conf](https://github.com/plutowang/term.conf), a terminal configuration management tool. The [`setup-cli`](https://github.com/plutowang/term.conf/tree/main/setup-cli) implementation demonstrates:
+Zlap is used in production CLI tools such as [nvim.pack](https://github.com/plutowang/nvim.pack), a Neovim configuration manager using `vim.pack`. The [`cli`](https://github.com/plutowang/nvim.pack/tree/main/cli) implementation demonstrates:
 
-- Subcommand architecture (`link`, `opencode`)
-- Global and subcommand-specific flags
-- Option parsing with validation
+- Subcommand architecture (`link`, `bench`)
+- Flag inheritance from parent to subcommand parsers
+- Option parsing with defaults and validation
 - Integrated colored logging
 - Production-ready CLI patterns
 
@@ -277,7 +277,7 @@ zig build test
 
 ### Production Example
 
-For a complete, real-world example, see [term.conf](https://github.com/plutowang/term.conf) - specifically the [`setup-cli`](https://github.com/plutowang/term.conf/tree/main/setup-cli) implementation. This terminal configuration management tool demonstrates subcommands, flags, options, and production-ready patterns.
+For a complete, real-world example, see [nvim.pack](https://github.com/plutowang/nvim.pack) - specifically the [`cli`](https://github.com/plutowang/nvim.pack/tree/main/cli) implementation. This Neovim configuration manager demonstrates subcommands, flag inheritance, options with defaults, and production-ready patterns.
 
 ### Getting Started
 
