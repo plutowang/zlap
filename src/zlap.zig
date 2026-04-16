@@ -659,10 +659,13 @@ pub const Parser = struct {
 
         std.debug.print("\nOptions:\n", .{});
 
+        // Reuse a single buffer across all iterations to avoid repeated alloc/free.
+        var buf = std.ArrayList(u8).empty;
+        defer buf.deinit(self.allocator);
+
         // Print flags
         for (self.flags.items) |fg| {
-            var buf = std.ArrayList(u8).empty;
-            defer buf.deinit(self.allocator);
+            buf.clearRetainingCapacity();
 
             if (fg.short) |s| {
                 buf.print(self.allocator, "-{c}", .{s}) catch {};
@@ -677,10 +680,13 @@ pub const Parser = struct {
             std.debug.print("  {s:<20} {s}\n", .{ buf.items, fg.description });
         }
 
+        // Reuse a second buffer for option descriptions across all iterations.
+        var desc_buf = std.ArrayList(u8).empty;
+        defer desc_buf.deinit(self.allocator);
+
         // Print options
         for (self.options.items) |opt| {
-            var buf = std.ArrayList(u8).empty;
-            defer buf.deinit(self.allocator);
+            buf.clearRetainingCapacity();
 
             if (opt.short) |s| {
                 buf.print(self.allocator, "-{c} <{s}>", .{ s, opt.value_name }) catch {};
@@ -693,8 +699,7 @@ pub const Parser = struct {
             }
 
             // Build description with additional info
-            var desc_buf = std.ArrayList(u8).empty;
-            defer desc_buf.deinit(self.allocator);
+            desc_buf.clearRetainingCapacity();
 
             desc_buf.print(self.allocator, "{s}", .{opt.description}) catch {};
 
