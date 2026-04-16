@@ -273,8 +273,7 @@ pub const Parser = struct {
             return h(self);
         }
 
-        self.logger.debug("No handler registered", .{});
-        return ParseError.NoHandler;
+        self.printErrorAndExit("No handler registered for command '{s}'", .{self.program_name});
     }
 
     // =================== Parsing Logic ===================
@@ -601,9 +600,8 @@ pub const Parser = struct {
     /// Prints an error message and the help text, then exits with code 1.
     /// This provides a user-friendly experience instead of a raw error trace.
     fn printErrorAndExit(self: *Parser, comptime fmt: []const u8, args: anytype) noreturn {
-        std.debug.print("Error: ", .{});
-        std.debug.print(fmt, args);
-        std.debug.print("\n\n", .{});
+        self.logger.err(fmt, args);
+        std.debug.print("\n", .{});
         self.printHelp();
         std.process.exit(1);
     }
@@ -663,57 +661,50 @@ pub const Parser = struct {
 
         // Print flags
         for (self.flags.items) |fg| {
-            var buf: [100]u8 = undefined;
-            var stream = std.io.fixedBufferStream(&buf);
-            const writer = stream.writer();
+            var buf = std.ArrayList(u8).empty;
+            defer buf.deinit(self.allocator);
 
             if (fg.short) |s| {
-                writer.print("-{c}", .{s}) catch {};
+                buf.print(self.allocator, "-{c}", .{s}) catch {};
                 if (fg.long != null) {
-                    writer.print(", ", .{}) catch {};
+                    buf.print(self.allocator, ", ", .{}) catch {};
                 }
             }
             if (fg.long) |l| {
-                writer.print("--{s}", .{l}) catch {};
+                buf.print(self.allocator, "--{s}", .{l}) catch {};
             }
 
-            const written = stream.getWritten();
-            std.debug.print("  {s:<20} {s}\n", .{ written, fg.description });
+            std.debug.print("  {s:<20} {s}\n", .{ buf.items, fg.description });
         }
 
         // Print options
         for (self.options.items) |opt| {
-            var buf: [100]u8 = undefined;
-            var stream = std.io.fixedBufferStream(&buf);
-            const writer = stream.writer();
+            var buf = std.ArrayList(u8).empty;
+            defer buf.deinit(self.allocator);
 
             if (opt.short) |s| {
-                writer.print("-{c} <{s}>", .{ s, opt.value_name }) catch {};
+                buf.print(self.allocator, "-{c} <{s}>", .{ s, opt.value_name }) catch {};
                 if (opt.long != null) {
-                    writer.print(", ", .{}) catch {};
+                    buf.print(self.allocator, ", ", .{}) catch {};
                 }
             }
             if (opt.long) |l| {
-                writer.print("--{s}=<{s}>", .{ l, opt.value_name }) catch {};
+                buf.print(self.allocator, "--{s}=<{s}>", .{ l, opt.value_name }) catch {};
             }
-
-            const written = stream.getWritten();
 
             // Build description with additional info
-            var desc_buf: [300]u8 = undefined;
-            var desc_stream = std.io.fixedBufferStream(&desc_buf);
-            const desc_writer = desc_stream.writer();
+            var desc_buf = std.ArrayList(u8).empty;
+            defer desc_buf.deinit(self.allocator);
 
-            desc_writer.print("{s}", .{opt.description}) catch {};
+            desc_buf.print(self.allocator, "{s}", .{opt.description}) catch {};
 
             if (opt.required) {
-                desc_writer.print(" (required)", .{}) catch {};
+                desc_buf.print(self.allocator, " (required)", .{}) catch {};
             } else if (opt.default) |d| {
-                desc_writer.print(" (default: {s})", .{d}) catch {};
+                desc_buf.print(self.allocator, " (default: {s})", .{d}) catch {};
             }
 
-            const desc = desc_stream.getWritten();
-            std.debug.print("  {s:<20} {s}\n", .{ written, desc });
+            std.debug.print("  {s:<20} {s}\n", .{ buf.items, desc_buf.items });
         }
 
         // Always show help option
