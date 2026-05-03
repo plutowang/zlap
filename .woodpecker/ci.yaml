@@ -1,0 +1,54 @@
+# ════════════════════════════════════════════════
+# Zig version — single source of truth
+# Change these values when upgrading Zig:
+variables:
+  - &zig_default "0.16.0"
+  - &zig_versions [ "0.15.2", "0.16.0" ]
+# ════════════════════════════════════════════════
+
+when:
+  - event: push
+    branch: [ main, develop ]
+  - event: pull_request
+    branch: [ main, develop ]
+
+matrix:
+  ZIG_VERSION: *zig_versions
+
+steps:
+  - name: setup
+    image: alpine:latest
+    commands:
+      - apk add --no-cache curl xz
+      - mkdir -p .zig
+      - |
+        if [ ! -f ".zig/zig" ]; then
+          curl -L "https://ziglang.org/download/$ZIG_VERSION/zig-x86_64-linux-$ZIG_VERSION.tar.xz" | tar xJ -C .zig --strip-components=1
+        fi
+
+  - name: lint
+    image: alpine:latest
+    when:
+      matrix:
+        ZIG_VERSION: *zig_default
+    depends_on: [ setup ]
+    commands:
+      - ./.zig/zig fmt --check .
+
+  - name: build
+    image: alpine:latest
+    when:
+      matrix:
+        ZIG_VERSION: *zig_default
+    depends_on: [ setup, lint ]
+    commands:
+      - ./.zig/zig build
+
+  - name: test
+    image: alpine:latest
+    depends_on: [ setup, build ]
+    when:
+      matrix:
+        ZIG_VERSION: *zig_default
+    commands:
+      - ./.zig/zig build test --summary all

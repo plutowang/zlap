@@ -2,7 +2,9 @@
 
 A modern, feature-rich command-line argument parsing library for Zig.
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE) [![CI](https://github.com/plutowang/zlap/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/plutowang/zlap/actions/workflows/ci.yml) [![Zig](https://img.shields.io/badge/Zig-0.15.2+-yellow.svg)](https://ziglang.org/) [![Release](https://img.shields.io/github/v/release/plutowang/zlap?include_prereleases)](https://github.com/plutowang/zlap/releases)
+[![Hosted on Codeberg](https://img.shields.io/badge/Hosted_on-Codeberg-2185d0?style=for-the-badge&logo=codeberg)](https://codeberg.org/bwang-dev/zlap) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE) [![CI](https://github.com/plutowang/zlap/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/plutowang/zlap/actions/workflows/ci.yml) [![Zig](https://img.shields.io/badge/Zig-0.15.2+-yellow.svg)](https://ziglang.org/) [![Release](https://img.shields.io/github/v/release/plutowang/zlap?include_prereleases)](https://github.com/plutowang/zlap/releases)
+
+> **Note:** The canonical repository for this project is hosted on [Codeberg](https://codeberg.org/bwang-dev/zlap). This GitHub repository is maintained solely as a read-only mirror. Please open issues and pull requests on Codeberg.
 
 ## Real-World Usage
 
